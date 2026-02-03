@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-01-28",
+  "categories": [
+    {
+      "id": "file_path_resolution",
+      "name": "File Path Resolution",
+      "description": "Functions to resolve file paths and access user files",
+      "icon": "FileText"
+    },
+    {
+      "id": "postgis_data_access",
+      "name": "Data Access",
+      "description": "Functions to access geographic data stored in PostGIS database",
+      "icon": "Database"
+    }
+  ],
+  "functions": [
+    {
+      "id": "get_assets_path",
+      "name": "get_assets_path",
+      "category": "file_path_resolution",
+      "description": "Resolve a relative path within the assets folder. Convenient helper for accessing files in your assets directory.",
+      "signature": "get_assets_path(relative_path: str) -> str",
+      "parameters": [
+        {
+          "name": "relative_path",
+          "type": "str",
+          "description": "Path relative to assets folder (e.g., 'file.geojson' or 'folder/file.geojson'). Can also include username prefix for convenience.",
+          "required": true,
+          "default": null
+        }
+      ],
+      "returns": {
+        "type": "str",
+        "description": "Absolute file path within assets directory"
+      },
+      "examples": [
+        {
+          "title": "Access file in assets root",
+          "code": "# Access file directly in assets folder\nfile_path = get_assets_path('kenya_boundary.geojson')\ngdf = gpd.read_file(file_path)",
+          "description": "Access a file in the root of assets folder"
+        },
+        {
+          "title": "Access file in subfolder",
+          "code": "# Access file in subfolder\nfile_path = get_assets_path('data/kenya_boundary.geojson')\ngdf = gpd.read_file(file_path)",
+          "description": "Access a file in a subfolder within assets"
+        },
+        {
+          "title": "With full path",
+          "code": "# Also works with full path including username\nfile_path = get_assets_path('username_earthcode/assets/file.geojson')\n# Automatically extracts the assets part",
+          "description": "The function extracts the assets part from full paths"
+        }
+      ],
+      "related_functions": ["get_user_path"]
+    },
+    {
+      "id": "get_area_by_name",
+      "name": "get_area_by_name",
+      "category": "postgis_data_access",
+      "description": "Retrieve an Area object from PostGIS database by name. Returns an Area object with geometry attribute that can be used with geopandas.",
+      "signature": "get_area_by_name(area_name: str) -> Area",
+      "parameters": [
+        {
+          "name": "area_name",
+          "type": "str",
+          "description": "Name of the area (case-insensitive search)",
+          "required": true,
+          "default": null
+        }
+      ],
+      "returns": {
+        "type": "Area",
+        "description": "Area object with 'geom' attribute containing the geometry (MultiPolygon)"
+      },
+      "examples": [
+        {
+          "title": "Basic usage",
+          "code": "# Get area by name\nimport geopandas as gpd\n\narea = get_area_by_name('Kenya_boundary')\n# Convert to GeoDataFrame\ngdf = gpd.GeoDataFrame([{'geometry': area.geom}], crs='EPSG:4326')\nprint(gdf)",
+          "description": "Retrieve an area and convert to GeoDataFrame"
+        },
+        {
+          "title": "Use in analysis",
+          "code": "# Get area and use for spatial operations\narea = get_area_by_name('Kenya_boundary')\ngdf = gpd.GeoDataFrame([{'name': 'Kenya', 'geometry': area.geom}], crs='EPSG:4326')\n\n# Calculate area\narea_km2 = gdf.geometry.area.sum() / 1e6\nprint(f\"Area: {area_km2:.2f} km²\")",
+          "description": "Use the area for spatial analysis"
+        },
+        {
+          "title": "Case-insensitive search",
+          "code": "# Name matching is case-insensitive\narea1 = get_area_by_name('kenya_boundary')\narea2 = get_area_by_name('KENYA_BOUNDARY')\n# Both return the same area",
+          "description": "The function performs case-insensitive matching"
+        }
+      ],
+      "notes": [
+        "Case-insensitive name matching",
+        "Returns Area object with 'geom' attribute",
+        "Geometry is in EPSG:4326 (WGS84)",
+        "Raises ValueError if area not found",
+        "Only returns areas belonging to the current user"
+      ],
+      "related_functions": ["get_area_by_id"]
+    },
+    {
+      "id": "get_area_by_id",
+      "name": "get_area_by_id",
+      "category": "postgis_data_access",
+      "description": "Retrieve an Area object from PostGIS database by ID. Useful when you know the specific area ID from metadata.",
+      "signature": "get_area_by_id(area_id: int) -> Area",
+      "parameters": [
+        {
+          "name": "area_id",
+          "type": "int",
+          "description": "ID of the area (integer)",
+          "required": true,
+          "default": null
+        }
+      ],
+      "returns": {
+        "type": "Area",
+        "description": "Area object with 'geom' attribute containing the geometry (MultiPolygon)"
+      },
+      "examples": [
+        {
+          "title": "Basic usage",
+          "code": "# Get area by ID\nimport geopandas as gpd\n\narea = get_area_by_id(1)\n# Convert to GeoDataFrame\ngdf = gpd.GeoDataFrame([{'geometry': area.geom}], crs='EPSG:4326')\nprint(gdf)",
+          "description": "Retrieve an area by its ID"
+        },
+        {
+          "title": "Using area ID from metadata",
+          "code": "# When you know the area ID from file metadata\narea_id = 5  # From file.metadata.postgis_area_id\narea = get_area_by_id(area_id)\ngdf = gpd.GeoDataFrame([{'geometry': area.geom}], crs='EPSG:4326')",
+          "description": "Use area ID from file metadata"
+        },
+        {
+          "title": "Error handling",
+          "code": "# Handle errors gracefully\ntry:\n    area = get_area_by_id(999)\n    gdf = gpd.GeoDataFrame([{'geometry': area.geom}], crs='EPSG:4326')\nexcept ValueError as e:\n    print(f\"Error: {e}\")",
+          "description": "Handle errors when area is not found"
+        }
+      ],
+      "notes": [
+        "Returns Area object with 'geom' attribute",
+        "Geometry is in EPSG:4326 (WGS84)",
+        "Raises ValueError if area not found or doesn't belong to user",
+        "Useful when you have the area ID from metadata"
+      ],
+      "related_functions": ["get_area_by_name"]
+    }
+  ],
+  "environment_variables": [
+    {
+      "name": "USER_MEDIA_DIR",
+      "description": "Absolute path to your user media directory",
+      "required": true
+    },
+    {
+      "name": "USER_ASSETS_DIR",
+      "description": "Absolute path to your assets folder (within media directory)",
+      "required": true
+    },
+    {
+      "name": "USER_ID",
+      "description": "Your user ID (integer)",
+      "required": true
+    },
+    {
+      "name": "USERNAME",
+      "description": "Your username",
+      "required": true
+    },
+    {
+      "name": "DJANGO_SETTINGS_MODULE",
+      "description": "Django settings module (for PostGIS functions)",
+      "required": false
+    }
+  ]
+}
